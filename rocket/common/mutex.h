@@ -35,7 +35,7 @@ public:
         }
     }
 private:
-    T& m_mutex;
+    T& m_mutex;//比如 一个Mutex对象
     bool m_is_lock{false};
 };
 

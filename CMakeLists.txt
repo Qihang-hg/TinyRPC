@@ -10,6 +10,6 @@ add_executable(TinyRPC main.cpp rocket/common/log.cpp rocket/common/log.h rocket
         rocket/common/tinyxml/tinystr.cpp rocket/common/tinyxml/tinystr.h
         rocket/common/tinyxml/tinyxml.cpp rocket/common/tinyxml/tinyxml.h
         rocket/common/tinyxml/tinyxmlerror.cpp rocket/common/tinyxml/tinyxmlparser.cpp
-        rocket/common/mutex.h)
+        rocket/common/mutex.h rocket/net/eventloop.cpp rocket/net/eventloop.h rocket/net/fd_event.cpp rocket/net/fd_event.h rocket/net/wakeup_fd_event.cpp rocket/net/wakeup_fd_event.h)
 
 
