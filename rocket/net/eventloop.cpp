@@ -168,6 +168,7 @@ void EventLoop::loop() {
 }
 
 void EventLoop::wakeup() {
+    INFOLOG("WAKE UP")
     m_wakeup_fd_event->wakeup();
 }
 
