@@ -11,6 +11,9 @@ namespace rocket{
 pid_t getPid();
 
 pid_t getThreadID();
+
+int64_t getNowMs();
+
 }
 
 

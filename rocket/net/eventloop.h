@@ -12,6 +12,8 @@
 #include "../common/mutex.h"
 #include "fd_event.h"
 #include "wakeup_fd_event.h"
+#include "timer.h"
+
 
 namespace rocket{
 class EventLoop {
@@ -33,9 +35,12 @@ public:
     void addTask(std::function<void()> cb, bool is_wake_up = false);
     //把任务添加到pending队列，然后从epollwaite返回后自己执行，而不是由其他线程执行
 
+    void addTimerEvent(TimerEvent::s_ptr event);
+
 private:
     void dealWakeup();
     void initWakeUpFdEvent();
+    void initTimer();//初始化定时器容器，并在eventloop中监听
 private:
     pid_t m_thread_id{0};
 
@@ -52,6 +57,8 @@ private:
     std::queue<std::function<void()>> m_pending_tasks;//待执行的任务队列
 
     Mutex m_mutex;
+
+    Timer* m_timer{NULL};//定时器容器
 };
 
 

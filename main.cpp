@@ -4,9 +4,12 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <string.h>
+#include <memory>
 #include "rocket/common/log.h"
 #include "rocket/net/fd_event.h"
 #include "rocket/net/eventloop.h"
+#include "rocket/net/timer_event.h"
+
 
 void* func(void*){
     int i = 20;
@@ -68,6 +71,15 @@ int test_main02(){
         DEBUGLOG("success get client fd[%d] peer addr[%s:%d]",clientfd,inet_ntoa(peer_addr.sin_addr), ntohs(peer_addr.sin_port));
     });
     eventloop->addEpollEvent(&event);
+
+    int i = 0;
+    rocket::TimerEvent::s_ptr timer_event = std::make_shared<rocket::TimerEvent>(
+1000,true,[&i](){
+            INFOLOG("trigger timer event, count = %d",i++);
+        }
+    );
+    eventloop->addTimerEvent(timer_event);
+
     eventloop->loop();
 }
 

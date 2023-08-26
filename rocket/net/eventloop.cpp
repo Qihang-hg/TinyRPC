@@ -59,7 +59,7 @@ EventLoop::EventLoop() {
     }
 
     initWakeUpFdEvent();//wakeup Fd相关操作
-
+    initTimer();
 
     INFOLOG("succ create event loop in thread %d", m_thread_id);
     t_current_eventloop = this;
@@ -71,6 +71,11 @@ EventLoop::~EventLoop() {
     if(m_wakeup_fd_event){
         delete m_wakeup_fd_event;
         m_wakeup_fd_event = NULL;
+    }
+
+    if(m_timer){
+        delete m_timer;
+        m_timer = NULL;
     }
 }
 
@@ -93,6 +98,16 @@ void EventLoop::initWakeUpFdEvent(){
     addEpollEvent(m_wakeup_fd_event);
 }
 
+void EventLoop::initTimer() {
+    m_timer = new Timer();
+    addEpollEvent(m_timer);
+}
+
+void EventLoop::addTimerEvent(TimerEvent::s_ptr event){
+    //Eventloop中添加定时事件 通过 将事件添加到容器中实现
+    m_timer->addTimerEvent(event);//向定时器容器中添加定时事件，定时器容器是被eventloop监听的
+}
+
 void EventLoop::loop() {
     while(!m_stop_flag){
         ScopeMutex<Mutex> lock(m_mutex);
@@ -108,13 +123,18 @@ void EventLoop::loop() {
             }
         }
 
+        //如果有定时任务需要执行，那么执行
+        //1.怎么判断定时任务怎么执行？now()>=TimerEvent.arrive_time
+        //2.arrive_time 如何让eventloop监听？
+
         //1. 取得下次定时任务的时间，与设定time_out取较大值，即下次定时任务时间超过1s就取定时任务时间为超时时间，否则取1s
-        int time_out = g_epoll_max_timeout;// max(1000, getNextTimeCallback());
         //2. 调用epoll_wait等待事件发生，超时时间为上述 time_out
+
+        int time_out = g_epoll_max_timeout;// max(1000, getNextTimeCallback());
         epoll_event result_events[g_epoll_max_events];
 //        DEBUGLOG("now begin to epoll_wait");
         int rt = epoll_wait(m_epoll_fd, result_events, g_epoll_max_events, time_out);
-        DEBUGLOG("now end epoll_wait, rt = %d",rt);
+//        DEBUGLOG("now end epoll_wait, rt = %d",rt);
         if(rt < 0){
             ERRORLOG("epoll_wait error error=%d",errno);
         }else{
@@ -122,6 +142,7 @@ void EventLoop::loop() {
                 epoll_event trigger_event = result_events[i];
                 FdEvent* fd_event = static_cast<FdEvent*>(trigger_event.data.ptr);
                 if(fd_event == NULL){
+                    ERRORLOG("fd_event = NULL, continue");
                     continue;
                 }
                 if(trigger_event.events & EPOLLIN){
@@ -131,6 +152,15 @@ void EventLoop::loop() {
                 if(trigger_event.events & EPOLLOUT){
                     DEBUGLOG("fd %d trigger EPOLLOUT event", fd_event->getFd());
                     addTask(fd_event->handler(FdEvent::TriggerEvent::OUT_EVENT));
+                }
+
+                if(trigger_event.events & EPOLLERR){
+                    DEBUGLOG("fd %d trigger EPOLLERROR event", fd_event->getFd());
+                    deleteEpollEvent(fd_event);
+                    if(fd_event->handler(FdEvent::ERROR_EVENT) != nullptr){
+                        DEBUGLOG("fd %d add error callback", fd_event->getFd());
+                        addTask(fd_event->handler(FdEvent::OUT_EVENT));
+                    }
                 }
             }
         }
