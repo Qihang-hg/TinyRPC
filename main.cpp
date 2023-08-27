@@ -11,6 +11,7 @@
 #include "rocket/net/timer_event.h"
 #include "rocket/net/io_thread.h"
 #include "rocket/net/io_thread_group.h"
+#include "rocket/net/tcp/net_addr.h"
 
 //test log
 void* func(void*){
@@ -202,10 +203,21 @@ void test_main04(){
 
 }
 
+//test tcp
+void test_main05(){
+    rocket::Config::SetGlobalConfig("../rocket/conf/rocket.xml");
+    rocket::Logger::InitGlobalLogger();
+
+    rocket::IPNetAddr addr("127.0.0.1",12345);
+    DEBUGLOG("create addr %s",addr.toString().c_str());
+}
+
 int main(){
 //    test_main01();//test eventloop
 //    test_main02();//test timer
 //    test_main03();//test iothread
-    test_main04();
+//    test_main04();
+
+    test_main05();
     return 0;
 }
