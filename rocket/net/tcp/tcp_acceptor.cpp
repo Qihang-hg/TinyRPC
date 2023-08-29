@@ -70,6 +70,7 @@ int TcpAcceptor::accept() {
         IPNetAddr peer_addr(client_addr);
         INFOLOG("A client have been accepted successfully, peer addr [%s]",peer_addr.toString().c_str());
         return client_fd;
+
     }else{
         //其他协议族 未实现
     }
