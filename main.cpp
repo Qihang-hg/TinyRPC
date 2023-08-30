@@ -12,6 +12,7 @@
 #include "rocket/net/io_thread.h"
 #include "rocket/net/io_thread_group.h"
 #include "rocket/net/tcp/net_addr.h"
+#include "rocket/net/tcp/tcp_server.h"
 
 //test log
 void* func(void*){
@@ -208,8 +209,11 @@ void test_main05(){
     rocket::Config::SetGlobalConfig("../rocket/conf/rocket.xml");
     rocket::Logger::InitGlobalLogger();
 
-    rocket::IPNetAddr addr("127.0.0.1",12345);
-    DEBUGLOG("create addr %s",addr.toString().c_str());
+    rocket::IPNetAddr::s_ptr addr = std::make_shared<rocket::IPNetAddr>("127.0.0.1",12345);
+    DEBUGLOG("create addr %s",addr->toString().c_str());
+    rocket::TcpServer tcp_server(addr);
+    tcp_server.start();
+
 }
 
 int main(){

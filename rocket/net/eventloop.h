@@ -36,7 +36,8 @@ public:
     //把任务添加到pending队列，然后从epollwaite返回后自己执行，而不是由其他线程执行
 
     void addTimerEvent(TimerEvent::s_ptr event);
-
+public:
+    static EventLoop* GetCurrentEventLoop();//获取当前线程中的EventLoop对象，如果没有就创建一个
 private:
     void dealWakeup();
     void initWakeUpFdEvent();

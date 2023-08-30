@@ -40,8 +40,10 @@
     DEBUGLOG("delete event success, fd[%d]",event->getFd());\
 
 namespace rocket{
+
 static int g_epoll_max_timeout = 10000;
 static int g_epoll_max_events = 10;
+
 static thread_local EventLoop* t_current_eventloop = NULL;
 //线程局部静态变量，用来判断是否创建过Eventloop,确保一个线程只创建一个
 EventLoop::EventLoop() {
@@ -134,7 +136,7 @@ void EventLoop::loop() {
         epoll_event result_events[g_epoll_max_events];
 //        DEBUGLOG("now begin to epoll_wait");
         int rt = epoll_wait(m_epoll_fd, result_events, g_epoll_max_events, time_out);
-//        DEBUGLOG("now end epoll_wait, rt = %d",rt);
+        DEBUGLOG("now end epoll_wait, rt = %d",rt);
         if(rt < 0){
             ERRORLOG("epoll_wait error error=%d",errno);
         }else{
@@ -231,6 +233,13 @@ void EventLoop::addTask(std::function<void()> cb, bool is_wake_up ){
     }
 }
 
+EventLoop* EventLoop::GetCurrentEventLoop(){
+    if(t_current_eventloop){
+        return t_current_eventloop;
+    }
+    t_current_eventloop = new EventLoop();
+    return t_current_eventloop;
+}
 
 
 }

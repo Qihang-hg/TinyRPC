@@ -32,7 +32,7 @@ IOThread* IOThreadGroup::getIOThread(){
 }
 
 void IOThreadGroup::join() {
-    for(size_t i = 0; i<m_io_thread_groups.size(); ++i){
+    for(size_t i = 0; i < m_io_thread_groups.size(); ++i){
         m_io_thread_groups[i]->join();
     }
 }

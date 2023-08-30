@@ -73,7 +73,12 @@ int TcpAcceptor::accept() {
 
     }else{
         //其他协议族 未实现
+        return -1;
     }
+}
+
+int TcpAcceptor::getListenFd() {
+    return m_listenfd;
 }
 
 

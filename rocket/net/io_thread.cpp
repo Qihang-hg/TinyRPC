@@ -18,7 +18,7 @@ IOThread::IOThread() {
 
     pthread_create(&m_thread,NULL,&IOThread::Main, this);
 
-    //wait,直到新线程执行完Main函数的前置，loop函数前,才能构造完成
+    //wait,直到新线程执行完Main函数的前置，loop函数前,才能构造完成进行工作。不然eventloop可能为创建好
     sem_wait(&m_init_semaphore);
     DEBUGLOG("IOThread [%d] cread success", m_thread_id);
 }
@@ -43,12 +43,14 @@ void *IOThread::Main(void *arg) {
 
     thread->m_event_loop = new EventLoop();
     thread->m_thread_id = getThreadID();
+
     //前面的前置执行完，再唤醒等待的线程。避免线程属性未确定好时被使用
-    sem_post(&thread->m_init_semaphore);
+    sem_post(&thread->m_init_semaphore);//+1, 等loop thread等能全部初始化完成， 构造函数中再启动
     DEBUGLOG("IOThread [%d] create, wait init sem", thread->m_thread_id);
-    //让IO线程等待，直到设置完eventloop的相关事件后，再由我们主动启动
+
+    //让IO线程等待，直到设置完eventloop的相关事件后，再由我们主动启动,通过start()函数给信号量
     DEBUGLOG("IOThread [%d] create, wait start sem", thread->m_thread_id);
-    sem_post(&thread->m_start_semaphore);
+    sem_wait(&thread->m_start_semaphore);
 
     DEBUGLOG("IOThread [%d] start loop", thread->m_thread_id);
     thread->m_event_loop->loop();
