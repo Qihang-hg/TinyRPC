@@ -28,6 +28,7 @@ void* func(void*){
 void test_main01() {
     rocket::Config::SetGlobalConfig("../rocket/conf/rocket.xml");
     rocket::Logger::InitGlobalLogger();
+
     pthread_t thread;
     pthread_create(&thread,NULL,&func,NULL);
     int i = 20;
@@ -216,12 +217,14 @@ void test_main05(){
 
 }
 
+
 int main(){
 //    test_main01();//test eventloop
 //    test_main02();//test timer
 //    test_main03();//test iothread
 //    test_main04();
-
     test_main05();
+
+
     return 0;
 }

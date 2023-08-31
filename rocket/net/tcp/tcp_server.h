@@ -5,10 +5,12 @@
 #ifndef TINYRPC_TCP_SERVER_H
 #define TINYRPC_TCP_SERVER_H
 
+#include <set>
 #include "tcp_acceptor.h"
 #include "net_addr.h"
 #include "../eventloop.h"
 #include "../io_thread_group.h"
+#include "tcp_connection.h"
 
 namespace rocket{
 
@@ -39,6 +41,7 @@ private:
 
     int m_client_counts{0};
 
+    std::set<TcpConnection::s_ptr> m_client;//保存所有客户连接
 };
 
 }

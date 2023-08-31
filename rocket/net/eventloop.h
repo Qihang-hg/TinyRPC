@@ -28,7 +28,7 @@ public:
 
     void stop();
 
-    void addEpollEvent(FdEvent* event);
+    void addEpollEvent(FdEvent* event);//判断是否已经存在，存在则修改
     void deleteEpollEvent(FdEvent* event);
     bool isInLoopThread();
 

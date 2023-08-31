@@ -4,6 +4,7 @@
 
 #include <functional>
 #include "tcp_server.h"
+#include "tcp_connection.h"
 #include "../eventloop.h"
 #include "../../common/log.h"
 
@@ -29,13 +30,20 @@ void TcpServer::start() {
 }
 
 void TcpServer::onAccept() {
-    int client_fd = m_acceptor->accept();
-//    FdEvent client_fd_event(client_fd);
-    m_client_counts++;
-    //todo：baclientfd添加到任意IO线程 connection
-//    m_io_thread_group->getIOThread()->getEventLoop()->addEpollEvent()
-    INFOLOG("TcpServer succ get client, fd = %d",client_fd);
+    auto re = m_acceptor->accept();
+    int client_fd = re.first;
+    NetAddr::s_ptr peer_addr = re.second;
 
+    m_client_counts++;
+
+    //todo：把clientfd的connection 添加到任意IO线程
+    IOThread* io_thread = m_io_thread_group->getIOThread();
+
+    //这里的connection会出了onAccept会析构
+    TcpConnection::s_ptr connection = std::make_shared<TcpConnection>(io_thread,client_fd,128,peer_addr);
+    connection->setState(Connected);
+    m_client.insert(connection);
+    INFOLOG("TcpServer succ get client, fd = %d",client_fd);
 }
 
 void TcpServer::init() {

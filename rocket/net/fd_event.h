@@ -17,13 +17,20 @@ public:
         OUT_EVENT = EPOLLOUT,
         ERROR_EVENT = EPOLLERR
     };
+
     FdEvent();
     FdEvent(int fd);
     virtual ~FdEvent();
 
+    void setNonBlock();
+
+    //取消监听
+    void cancel(TriggerEvent event_type);
+
     std::function<void()> handler(TriggerEvent event_type);
 
     void listen(TriggerEvent event_type, std::function<void()> callback);
+
     int getFd() const {
         return m_fd;
     }
@@ -37,6 +44,7 @@ protected:
 
     std::function<void()> m_read_callback{nullptr};
     std::function<void()> m_write_callback{nullptr};
+    std::function<void()> m_error_callback{nullptr};
 };
 
 

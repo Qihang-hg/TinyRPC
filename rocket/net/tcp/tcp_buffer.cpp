@@ -14,11 +14,11 @@ TcpBuffer::~TcpBuffer(){
 }
 
 int TcpBuffer::readAble(){
-    return m_write_index-m_write_index;
+    return m_write_index - m_read_index;
 }
 
 int TcpBuffer::writeAble() {
-    return m_size-m_write_index;
+    return m_buffer.size() - m_write_index;
 }
 
 int TcpBuffer::readIndex(){
@@ -36,13 +36,14 @@ void TcpBuffer::writeToBuffer(const char* buf, int size){
         resizeBuffer(new_size);
     }
     memcpy(&m_buffer[m_write_index], buf, size);
+    m_write_index += size;
 }
 
 void TcpBuffer::readFromBuffer(std::vector<char>& re, int size){
     if(readAble() == 0){
         return;
     }
-    int read_size = readAble() > size ? size:readAble();
+    int read_size = readAble() > size ? size : readAble();
     std::vector<char>tmp(read_size);
     memcpy(&tmp[0], &m_buffer[m_read_index], read_size);
 

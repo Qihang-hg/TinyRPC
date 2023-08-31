@@ -149,11 +149,11 @@ void EventLoop::loop() {
                 }
                 if(trigger_event.events & EPOLLIN){
                     DEBUGLOG("fd %d trigger EPOLLIN event", fd_event->getFd());
-                    addTask(fd_event->handler(FdEvent::TriggerEvent::IN_EVENT));
+                    addTask(fd_event->handler(FdEvent::IN_EVENT));
                 }
                 if(trigger_event.events & EPOLLOUT){
                     DEBUGLOG("fd %d trigger EPOLLOUT event", fd_event->getFd());
-                    addTask(fd_event->handler(FdEvent::TriggerEvent::OUT_EVENT));
+                    addTask(fd_event->handler(FdEvent::OUT_EVENT));
                 }
 
                 if(trigger_event.events & EPOLLERR){
@@ -185,19 +185,6 @@ void EventLoop::stop() {
 void EventLoop::addEpollEvent(FdEvent* event){
     if(isInLoopThread()) {
         ADD_TO_EPOLL();
-//        auto it = m_listen_fds.find(event->getFd());
-//        int op = EPOLL_CTL_ADD;
-//        if(it != m_listen_fds.end()){
-//            op = EPOLL_CTL_MOD;
-//        }
-//        epoll_event tmp = event->getEpollEvent();
-//        INFOLOG("epoll_event.events = %d, fd = %d",(int)tmp.events, event->getFd());
-//        int rt = epoll_ctl(m_epoll_fd, op, event->getFd(), &tmp);
-//        if(rt == -1){
-//            ERRORLOG("failed epoll_ctl when add fd, errno=%d, error=%s",errno, strerror(errno));
-//        }
-//        m_listen_fds.insert(event->getFd());
-//        DEBUGLOG("add event success, fd[%d]",event->getFd());
     }else{
         //如果不在创建EventLoop的线程
         //lamda函数，将 ADD_TO_EPOLL封装为回调函数，等到原本的线程再执行
