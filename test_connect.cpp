@@ -29,16 +29,18 @@ void test_main_connect(){
 
     int rt = connect(fd, reinterpret_cast<sockaddr*>(&server_addr), sizeof(server_addr));
 
-    std::string msg = "hello world";
-
+    std::string msg = "hello,world";
+//    char msg[128] = "hello,world";
     rt = write(fd, msg.c_str(), msg.length());
+//    rt = write(fd, msg, 128);
 
     DEBUGLOG("success write %d bytes, [%s]",rt,msg.c_str());
 
 
-    char buf[100];
-    rt = read(fd, buf, 100);
-    DEBUGLOG("success read %d bytes, [%s]", rt, std::string(buf).c_str());
+    char buf[128];
+    memset(buf,0,sizeof(buf));
+    int re = read(fd, buf, ssize_t(128));
+    DEBUGLOG("success read %d bytes, [%s]", re, std::string(buf).c_str());
 }
 
 int main(){
