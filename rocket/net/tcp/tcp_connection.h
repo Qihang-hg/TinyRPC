@@ -5,10 +5,14 @@
 #ifndef TINYRPC_TCP_CONNECTION_H
 #define TINYRPC_TCP_CONNECTION_H
 
+#include <queue>
 #include <memory>
 #include "net_addr.h"
 #include "tcp_buffer.h"
 #include "../io_thread.h"
+#include "abstract_protocol.h"
+#include "../abstract_coder.h"
+
 
 namespace rocket{
 
@@ -29,7 +33,7 @@ class TcpConnection {
 public:
     typedef std::shared_ptr<TcpConnection> s_ptr;
 public:
-    TcpConnection(EventLoop* event_loop, int fd, int buffer_size, NetAddr::s_ptr peer_addr);
+    TcpConnection(EventLoop* event_loop, int fd, int buffer_size, NetAddr::s_ptr peer_addr,TcpConnectionType type = TcpConnectionByServer);
     ~TcpConnection();
 
     void onRead();
@@ -47,6 +51,13 @@ public:
 
     void setConnectionType(TcpConnectionType type);
 
+    void listenWrite(); //启动监听可写事件
+    void listenRead(); //启动监听可读事件
+
+    void pushSendMessage(AbstractProtocol::s_ptr message, std::function<void(AbstractProtocol::s_ptr)> done);
+
+    void pushReadMessage(const std::string &req_id, std::function<void(AbstractProtocol::s_ptr)> done);
+
 private:
     EventLoop* m_event_loop{NULL};    //当前connection属于的那个线程
 
@@ -59,10 +70,21 @@ private:
 
     FdEvent* m_fd_event{NULL};  //connection的套接字 本质也属于一个事件
 
+    AbstractCoder* m_coder{NULL};
+
     TcpState m_state;
     int m_fd{-1};//客户套接字
 
     TcpConnectionType m_connection_type {TcpConnectionByServer};
+
+    //std::pair<AbstractProtocol::s_ptr, std::function<void(AbstractProtocol::s_ptr)>>
+    //里面是pair对象，绑定智能指针 和 要执行的func。也就是要写的 messages
+    std::vector<std::pair<AbstractProtocol::s_ptr, std::function<void(AbstractProtocol::s_ptr)>>> m_write_dones;  //写事件的回调函数
+
+    //key 为req-id
+    std::map<std::string, std::function<void(AbstractProtocol::s_ptr)>> m_read_dones;  //读事件的回调函数
+
+
 };
 
 

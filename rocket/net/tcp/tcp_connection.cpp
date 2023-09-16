@@ -6,29 +6,45 @@
 #include "tcp_connection.h"
 #include "../fd_event_group.h"
 #include "../../common/log.h"
+#include "../string_coder.h"
 
 namespace rocket{
 
-TcpConnection::TcpConnection(EventLoop* event_loop, int fd, int buffer_size, NetAddr::s_ptr peer_addr)
-    :m_event_loop(event_loop), m_peer_addr(peer_addr), m_state(NotConnected), m_fd(fd){
+TcpConnection::TcpConnection(EventLoop* event_loop, int fd, int buffer_size, NetAddr::s_ptr peer_addr, TcpConnectionType type/* = TcpConnectionByServer*/)
+    :m_event_loop(event_loop), m_peer_addr(peer_addr), m_state(NotConnected), m_fd(fd), m_connection_type(type){
     m_in_buffer = std::make_shared<TcpBuffer>(buffer_size);
     m_out_buffer = std::make_shared<TcpBuffer>(buffer_size);
 
     m_fd_event = FdEventGroup::GetFdEventGroup()->getFdEvent(fd);
     m_fd_event->setNonBlock();
 
-    m_fd_event->listen(FdEvent::IN_EVENT, std::bind(&TcpConnection::onRead, this));
+    //服务端才主动监听读事件 客户端在需要的时候监听读事件
+    if(m_connection_type == TcpConnectionByServer){
+        listenRead();
+    }
+    //将对客户的监听事件添加到线程的eventloop中去
+//    m_fd_event->listen(FdEvent::IN_EVENT, std::bind(&TcpConnection::onRead, this));
+//    m_event_loop->addEpollEvent(m_fd_event);
+
+    m_coder = new StringCoder();
     DEBUGLOG("TcpConnection construct");
 
-    //将对客户的监听事件添加到线程的eventloop中去
-    m_event_loop->addEpollEvent(m_fd_event);
+
+
 }
 
 TcpConnection::~TcpConnection(){
     DEBUGLOG("~TcpConnection");
+    if(m_coder){
+        delete m_coder;
+        m_coder = NULL;
+    }
 }
 
 void TcpConnection::onRead(){
+    //还未区分 客户端和服务端在读上面的 执行逻辑区别，且 m_read_dones 回调函数 也需要判断是否执行完(参考 write)
+
+
     // 1.从 socket缓冲区，调用系统read读取字节到 in_buffer
     if(m_state != Connected){
         ERRORLOG("onRead error, client has already disconnected, addr[%s], clientfd[%d]", m_peer_addr->toString().c_str(), m_fd_event->getFd());
@@ -79,28 +95,47 @@ void TcpConnection::onRead(){
     excute();
 }
 
-void TcpConnection::excute(){
-    //将RPC请求执行业务逻辑，获取RPC响应，再把RPC响应发送回去
-    std::vector<char> tmp;//将缓冲区内容读取到tmp
-    int size = m_in_buffer->readAble();
-    tmp.resize(size);
-    m_in_buffer->readFromBuffer(tmp, size);//读到 读缓冲区
 
-    //这里暂时原样作为响应发送回去，不对数据执行别的处理逻辑
-    std::string msg;
-    for(size_t i = 0; i<tmp.size(); ++i){
-        msg += tmp[i];
+void TcpConnection::excute(){
+    // server端先简单处理：将RPC请求执行业务逻辑，获取RPC响应，再把RPC响应发送回去
+    if(m_connection_type == TcpConnectionByServer){
+        std::vector<char> tmp;//将缓冲区内容读取到tmp
+        int size = m_in_buffer->readAble();
+        tmp.resize(size);
+        m_in_buffer->readFromBuffer(tmp, size);//读到 读缓冲区
+
+        //这里暂时原样作为响应发送回去，不对数据执行别的处理逻辑
+        std::string msg;
+        for(size_t i = 0; i<tmp.size(); ++i){
+            msg += tmp[i];
+        }
+
+        INFOLOG("success get request[%s] from client addr[%s]", msg.c_str(), m_peer_addr->toString().c_str());
+
+        // 从读缓冲区通过tmp 拷贝到了 写缓冲区
+        m_out_buffer->writeToBuffer(msg.c_str(),msg.length());
+
+        //执行完后,监听写事件并添加到epoll
+        listenWrite();
+        DEBUGLOG("onWrite 写事件添加成功");
+    }else{
+        //client：从 buffer decode得到message对象，判断是否与req_id(响应的id 是否与 发送的请求id)相等，则读成功 ,执行回调
+        std::vector<AbstractProtocol::s_ptr> result;
+        m_coder->decode(result, m_in_buffer);
+
+        for(size_t i = 0; i<result.size(); ++i){
+            std::string req_id = result[i]->getReqId();
+            auto it = m_read_dones.find(req_id);
+            if(it != m_read_dones.end()){
+                it->second(result[i]);
+
+            }
+
+        }
     }
 
-    INFOLOG("success get request[%s] from client addr[%s]", msg.c_str(), m_peer_addr->toString().c_str());
 
-    // 从读缓冲区通过tmp 拷贝到了 写缓冲区
-    m_out_buffer->writeToBuffer(msg.c_str(),msg.length());
 
-    //执行完后,监听写事件并添加到epoll
-    m_fd_event->listen(FdEvent::OUT_EVENT, std::bind(&TcpConnection::onWrite, this));
-    m_event_loop->addEpollEvent(m_fd_event);
-    DEBUGLOG("onWrite 写事件添加成功");
 }
 
 void TcpConnection::onWrite(){
@@ -109,6 +144,17 @@ void TcpConnection::onWrite(){
     if(m_state != Connected){
         ERRORLOG("onWrite error, client has already disconected, adde[%s], clientfd[%d]", m_peer_addr->toString().c_str(), m_fd);
         return;
+    }
+
+    // 如果当前是在连接的客户端
+    if(m_connection_type == TcpConnectionByClient){
+        //1.将message encode得到字节流
+        //2.将字节流写入到 out_buffer,然后全部发送
+        std::vector<AbstractProtocol::s_ptr> messages;
+        for(size_t i = 0; i<m_write_dones.size(); ++i){
+            messages.push_back(m_write_dones[i].first);// 智能指针的get方法，获取托管的指针，为AbstractProtocol*
+        }
+        m_coder->encode(messages, m_out_buffer);//方大盘发送缓冲区
     }
 
     //写缓冲区能读出来的就是要发送的
@@ -141,6 +187,17 @@ void TcpConnection::onWrite(){
         m_fd_event->cancel(FdEvent::OUT_EVENT);
         m_event_loop->addEpollEvent(m_fd_event);
     }
+
+    if(m_connection_type == TcpConnectionByClient){
+        for(size_t i = 0; i<m_write_dones.size(); ++i){
+            m_write_dones[i].second(m_write_dones[i].first); //发送后 依次执行回调函数
+        }
+
+        m_write_dones.clear();  //执行完回调函数后做清空
+    }
+
+
+
 }
 
 void TcpConnection::setState(const TcpState state) {
@@ -182,5 +239,25 @@ void TcpConnection::shutdown() {
 void TcpConnection::setConnectionType(TcpConnectionType type){
     m_connection_type = type;
 }
+
+void TcpConnection::listenWrite(){
+    //监听写事件并添加到epoll
+    m_fd_event->listen(FdEvent::OUT_EVENT, std::bind(&TcpConnection::onWrite, this));
+    m_event_loop->addEpollEvent(m_fd_event);
+}
+void TcpConnection::listenRead(){
+    m_fd_event->listen(FdEvent::IN_EVENT, std::bind(&TcpConnection::onRead, this));
+    m_event_loop->addEpollEvent(m_fd_event);
+}
+
+void TcpConnection::pushSendMessage(AbstractProtocol::s_ptr message, std::function<void(AbstractProtocol::s_ptr)> done){
+    m_write_dones.push_back(std::make_pair(message,done));
+}
+
+void TcpConnection::pushReadMessage(const std::string &req_id, std::function<void(AbstractProtocol::s_ptr)> done){
+    m_read_dones.insert(std::make_pair(req_id, done));
+}
+
+
 
 }

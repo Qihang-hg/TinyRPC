@@ -27,7 +27,7 @@ public:
 
     //异步读取message
     //如果读取message成功,会调用done,done的入参是message对象
-    void readMessage(AbstractProtocol::s_ptr message, std::function<void(AbstractProtocol::s_ptr)> done);
+    void readMessage(const std::string &req_id, std::function<void(AbstractProtocol::s_ptr)> done);
 
 private:
     NetAddr::s_ptr m_peer_addr; //保存的对端地址

@@ -25,7 +25,8 @@ add_executable(TinyRPC main.cpp rocket/common/log.cpp rocket/common/log.h rocket
         rocket/net/fd_event_group.cpp rocket/net/fd_event_group.h
         rocket/net/tcp/tcp_connection.cpp rocket/net/tcp/tcp_connection.h
         rocket/net/tcp/tcp_client.cpp rocket/net/tcp/tcp_client.h
-        rocket/net/tcp/abstract_protocol.cpp rocket/net/tcp/abstract_protocol.h)
+        rocket/net/tcp/abstract_protocol.cpp rocket/net/tcp/abstract_protocol.h
+        rocket/net/string_coder.h)
 
 add_executable(Test test_connect.cpp rocket/common/log.cpp rocket/common/log.h rocket/common/util.cpp
         rocket/common/util.h rocket/testcases/test_log.cpp rocket/common/config.cpp rocket/common/config.h
@@ -48,4 +49,5 @@ add_executable(Test test_connect.cpp rocket/common/log.cpp rocket/common/log.h r
         rocket/net/tcp/tcp_connection.cpp rocket/net/tcp/tcp_connection.h
         rocket/net/tcp/tcp_client.cpp rocket/net/tcp/tcp_client.h
         rocket/net/tcp/abstract_protocol.cpp rocket/net/tcp/abstract_protocol.h
-        )
+        rocket/net/abstract_coder.cpp rocket/net/abstract_coder.h
+        rocket/net/string_coder.h)
