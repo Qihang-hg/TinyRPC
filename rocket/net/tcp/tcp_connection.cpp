@@ -9,8 +9,8 @@
 
 namespace rocket{
 
-TcpConnection::TcpConnection(IOThread* io_thread, int fd, int buffer_size, NetAddr::s_ptr peer_addr)
-    :m_io_thread(io_thread), m_peer_addr(peer_addr), m_state(NotConnected), m_fd(fd){
+TcpConnection::TcpConnection(EventLoop* event_loop, int fd, int buffer_size, NetAddr::s_ptr peer_addr)
+    :m_event_loop(event_loop), m_peer_addr(peer_addr), m_state(NotConnected), m_fd(fd){
     m_in_buffer = std::make_shared<TcpBuffer>(buffer_size);
     m_out_buffer = std::make_shared<TcpBuffer>(buffer_size);
 
@@ -21,7 +21,7 @@ TcpConnection::TcpConnection(IOThread* io_thread, int fd, int buffer_size, NetAd
     DEBUGLOG("TcpConnection construct");
 
     //将对客户的监听事件添加到线程的eventloop中去
-    io_thread->getEventLoop()->addEpollEvent(m_fd_event);
+    m_event_loop->addEpollEvent(m_fd_event);
 }
 
 TcpConnection::~TcpConnection(){
@@ -99,7 +99,7 @@ void TcpConnection::excute(){
 
     //执行完后,监听写事件并添加到epoll
     m_fd_event->listen(FdEvent::OUT_EVENT, std::bind(&TcpConnection::onWrite, this));
-    m_io_thread->getEventLoop()->addEpollEvent(m_fd_event);
+    m_event_loop->addEpollEvent(m_fd_event);
     DEBUGLOG("onWrite 写事件添加成功");
 }
 
@@ -139,7 +139,7 @@ void TcpConnection::onWrite(){
     //取消对写事件的监听，并更新到io线程的epoll中
     if(is_write_all){
         m_fd_event->cancel(FdEvent::OUT_EVENT);
-        m_io_thread->getEventLoop()->addEpollEvent(m_fd_event);
+        m_event_loop->addEpollEvent(m_fd_event);
     }
 }
 
@@ -159,8 +159,8 @@ void TcpConnection::clear() {
     //取消对读写事件的监听。即使后面误加到 epoll,也无监听事件
     m_fd_event->cancel(FdEvent::IN_EVENT);
     m_fd_event->cancel(FdEvent::OUT_EVENT);
-    m_io_thread->getEventLoop()->addEpollEvent(m_fd_event);
-    m_io_thread->getEventLoop()->deleteEpollEvent(m_fd_event);
+    m_event_loop->addEpollEvent(m_fd_event);
+    m_event_loop->deleteEpollEvent(m_fd_event);
 
     m_state = Closed;
 }
@@ -177,6 +177,10 @@ void TcpConnection::shutdown() {
     //发送 FIN报文，触发四次挥手第一个阶段，
     //当fd发生可读事件 且可读数据为0 即对端发送了FIN
 
+}
+
+void TcpConnection::setConnectionType(TcpConnectionType type){
+    m_connection_type = type;
 }
 
 }

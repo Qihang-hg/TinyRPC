@@ -40,7 +40,7 @@ void TcpServer::onAccept() {
     IOThread* io_thread = m_io_thread_group->getIOThread();
 
     //这里的connection会出了onAccept会析构
-    TcpConnection::s_ptr connection = std::make_shared<TcpConnection>(io_thread,client_fd,128,peer_addr);
+    TcpConnection::s_ptr connection = std::make_shared<TcpConnection>(io_thread->getEventLoop(),client_fd,128,peer_addr);
     connection->setState(Connected);
     m_client.insert(connection);
     INFOLOG("TcpServer succ get client, fd = %d",client_fd);

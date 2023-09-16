@@ -36,6 +36,8 @@ public:
     //把任务添加到pending队列，然后从epollwaite返回后自己执行，而不是由其他线程执行
 
     void addTimerEvent(TimerEvent::s_ptr event);
+    bool isLooping();
+
 public:
     static EventLoop* GetCurrentEventLoop();//获取当前线程中的EventLoop对象，如果没有就创建一个
 private:
@@ -60,6 +62,8 @@ private:
     Mutex m_mutex;
 
     Timer* m_timer{NULL};//定时器容器
+
+    bool m_is_looping{false};
 };
 
 

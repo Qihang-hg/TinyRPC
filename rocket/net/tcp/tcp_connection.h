@@ -20,11 +20,16 @@ enum TcpState{
     Closed = 4
 };
 
+enum TcpConnectionType {
+    TcpConnectionByServer = 1,
+    TcpConnectionByClient = 2, //客户端使用 代表与服务端的连接
+};
+
 class TcpConnection {
 public:
     typedef std::shared_ptr<TcpConnection> s_ptr;
 public:
-    TcpConnection(IOThread* io_thread, int fd, int buffer_size, NetAddr::s_ptr peer_addr);
+    TcpConnection(EventLoop* event_loop, int fd, int buffer_size, NetAddr::s_ptr peer_addr);
     ~TcpConnection();
 
     void onRead();
@@ -40,9 +45,10 @@ public:
 
     void shutdown();//服务器主动关闭连接.对于恶意连接，连接后不读写 占用资源
 
+    void setConnectionType(TcpConnectionType type);
 
 private:
-    IOThread* m_io_thread{NULL};    //当前connection属于的那个线程
+    EventLoop* m_event_loop{NULL};    //当前connection属于的那个线程
 
     NetAddr::s_ptr m_local_addr;
     NetAddr::s_ptr m_peer_addr;//对端地址
@@ -56,7 +62,7 @@ private:
     TcpState m_state;
     int m_fd{-1};//客户套接字
 
-
+    TcpConnectionType m_connection_type {TcpConnectionByServer};
 };
 
 

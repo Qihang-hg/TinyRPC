@@ -110,7 +110,12 @@ void EventLoop::addTimerEvent(TimerEvent::s_ptr event){
     m_timer->addTimerEvent(event);//向定时器容器中添加定时事件，定时器容器是被eventloop监听的
 }
 
+bool EventLoop::isLooping() {
+    return m_is_looping;
+}
+
 void EventLoop::loop() {
+    m_is_looping = true;
     while(!m_stop_flag){
         ScopeMutex<Mutex> lock(m_mutex);
         std::queue<std::function<void()>> tmp_tasks;
